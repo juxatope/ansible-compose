@@ -76,7 +76,9 @@ python main.py systemd timer-status config.yaml
 
 ## Configuration Format
 
-Both JSON and YAML formats are supported:
+Both JSON and YAML formats are supported. For complete configuration reference, see [docs/configuration-reference.md](docs/configuration-reference.md).
+
+**Basic example:**
 
 ```yaml
 playbook: playbooks/deploy.yml
