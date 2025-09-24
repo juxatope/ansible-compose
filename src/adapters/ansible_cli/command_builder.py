@@ -1,6 +1,6 @@
 import json
 from typing import List
-from ..models.ansible_config import AnsibleConfig
+from ...models.ansible_config import AnsibleConfig
 
 
 class CommandBuilder:

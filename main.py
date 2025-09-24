@@ -10,9 +10,9 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.ansible_service import AnsibleService
-from src.metadata.manager import RunLimitExceeded
+from src.core.metadata.manager import RunLimitExceeded
 from src.config.loader import ConfigFormatError
-from src.execution.executor import AnsibleExecutionError
+from src.core.execution.executor import AnsibleExecutionError
 
 
 def setup_logging(verbose: bool = False):

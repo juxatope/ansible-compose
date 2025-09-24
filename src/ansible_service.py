@@ -2,12 +2,12 @@ from pathlib import Path
 from typing import Optional
 
 from .config.loader import ConfigLoader
-from .commands.builder import CommandBuilder
-from .execution.executor import AnsibleExecutor, ExecutionResult
-from .metadata.manager import MetadataManager, RunLimitExceeded
+from .adapters.ansible_cli.command_builder import CommandBuilder
+from .core.execution.executor import AnsibleExecutor, ExecutionResult
+from .core.metadata.manager import MetadataManager, RunLimitExceeded
 from .models.ansible_config import AnsibleConfig
-from .logging.log_manager import LogManager
-from .systemd.service_generator import SystemdServiceGenerator
+from .infrastructure.logging.log_manager import LogManager
+from .adapters.systemd.service_generator import SystemdServiceGenerator
 
 
 class AnsibleService:
