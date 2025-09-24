@@ -63,25 +63,6 @@ def run_cli(args):
         return 1
 
 
-def run_server(args):
-    try:
-        import uvicorn
-        from src.api.app import app
-
-        print(f"Starting Ansible Runner Service on {args.host}:{args.port}")
-        uvicorn.run(
-            app,
-            host=args.host,
-            port=args.port,
-            log_level="info" if args.verbose else "warning"
-        )
-    except ImportError:
-        print("Error: FastAPI and uvicorn are required for server mode")
-        print("Install with: pip install fastapi uvicorn")
-        return 1
-    except Exception as e:
-        print(f"Server Error: {e}")
-        return 1
 
 
 def info_command(args):
@@ -247,19 +228,6 @@ def main():
         help="Skip updating run metadata"
     )
 
-    # Server command
-    server_parser = subparsers.add_parser("server", help="Start HTTP API server")
-    server_parser.add_argument(
-        "--host",
-        default="0.0.0.0",
-        help="Host to bind server to (default: 0.0.0.0)"
-    )
-    server_parser.add_argument(
-        "--port",
-        type=int,
-        default=8000,
-        help="Port to bind server to (default: 8000)"
-    )
 
     # Info command
     info_parser = subparsers.add_parser("info", help="Show configuration information")
@@ -332,7 +300,7 @@ def main():
         action_parser.add_argument("--system", action="store_true", help="Control system service")
 
     # Handle legacy usage first (before parsing subcommands)
-    if len(sys.argv) >= 2 and not sys.argv[1].startswith('-') and sys.argv[1] not in ['run', 'server', 'info', 'command', 'validate', 'logs', 'systemd']:
+    if len(sys.argv) >= 2 and not sys.argv[1].startswith('-') and sys.argv[1] not in ['run', 'info', 'command', 'validate', 'logs', 'systemd']:
         # Legacy mode: python main.py config.json [--dry-run]
         config_file = sys.argv[1]
         if Path(config_file).exists():
@@ -352,8 +320,6 @@ def main():
     # Handle subcommands
     if args.command == "run":
         return run_cli(args)
-    elif args.command == "server":
-        return run_server(args)
     elif args.command == "info":
         return info_command(args)
     elif args.command == "command":

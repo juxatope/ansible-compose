@@ -1,6 +1,6 @@
 # Ansible Runner Service
 
-A microservice for running Ansible playbooks with JSON/YAML configuration management, built with a clean architecture and optional HTTP API.
+A microservice for running Ansible playbooks with JSON/YAML configuration management, built with a clean architecture.
 
 ## Features
 
@@ -9,7 +9,6 @@ A microservice for running Ansible playbooks with JSON/YAML configuration manage
 - **Comprehensive logging**: Dedicated log directories with automatic rotation
 - **Password file security**: Support for secure authentication files
 - **CLI interface**: Command-line tool with multiple commands
-- **HTTP API**: RESTful API using FastAPI (optional)
 - **Clean architecture**: Separated concerns with dependency injection
 - **Legacy compatibility**: Works with existing scripts
 
@@ -21,7 +20,6 @@ src/
 ├── commands/        # Ansible command building
 ├── execution/       # Command execution & process management
 ├── metadata/        # Run tracking & limits
-├── api/            # HTTP API endpoints
 ├── models/         # Data models & validation
 └── ansible_service.py  # Main service orchestrator
 ```
@@ -32,7 +30,7 @@ src/
 # Basic installation
 pip install pyyaml
 
-# With HTTP API support
+# Full installation
 pip install -r requirements.txt
 ```
 
@@ -69,19 +67,6 @@ python main.py systemd start config.yaml
 python main.py systemd uninstall config.yaml
 ```
 
-### HTTP API Server
-
-```bash
-# Start API server
-python main.py server --host 0.0.0.0 --port 8000
-```
-
-## API Endpoints
-
-- `GET /health` - Health check
-- `POST /run` - Execute playbook
-- `GET /config/{path}/info` - Get configuration metadata
-- `GET /config/{path}/command` - Get generated command
 
 ## Configuration Format
 
@@ -173,4 +158,3 @@ The codebase follows clean architecture principles:
 - **Commands**: Ansible command generation
 - **Execution**: Process management and result handling
 - **Metadata**: Run tracking and limits
-- **API**: HTTP interface layer
