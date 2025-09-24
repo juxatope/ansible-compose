@@ -1,0 +1,31 @@
+{
+  "playbook": "site.yml",
+  "inventory": "inventory/hosts",
+  "limit": "webservers",
+  "extra_vars": {
+    "app_version": "1.2.3",
+    "environment": "production"
+  },
+  "tags": ["deploy", "configure"],
+  "skip_tags": ["backup"],
+  "check": false,
+  "diff": false,
+  "verbose": 1,
+  "forks": 10,
+  "become": true,
+  "become_user": "root",
+  "become_method": "sudo",
+  "vault_password_file": "vault_pass.txt",
+  "private_key": "~/.ssh/id_rsa",
+  "connection": "ssh",
+  "timeout": 30,
+  "start_at_task": null,
+  "metadata": {
+    "name": "Deploy Web Application",
+    "description": "Deploys web application to production servers",
+    "run_count": 0,
+    "max_runs": 5,
+    "last_run": null,
+    "schedule": "daily"
+  }
+}

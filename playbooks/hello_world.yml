@@ -1,0 +1,19 @@
+---
+- name: Hello World Playbook
+  hosts: localhost
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Display hello world message
+      debug:
+        msg: "Hello World from Ansible!"
+
+    - name: Display custom variables if provided
+      debug:
+        msg: "App name: {{ app_name | default('not specified') }}, Debug mode: {{ debug | default(false) }}"
+
+    - name: Show current timestamp
+      debug:
+        msg: "Executed at: {{ ansible_date_time.iso8601 }}"
+      when: ansible_date_time is defined

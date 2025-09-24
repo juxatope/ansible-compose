@@ -1,0 +1,20 @@
+{
+  "playbook": "playbooks/hello_world.yml",
+  "limit": "localhost",
+  "extra_vars": {
+    "debug": true,
+    "app_name": "HelloWorld App"
+  },
+  "check": false,
+  "diff": false,
+  "verbose": 1,
+  "become": false,
+  "metadata": {
+    "name": "Hello World Test",
+    "description": "Simple hello world test using ansible runner",
+    "run_count": 5,
+    "max_runs": 5,
+    "last_run": "2025-09-23T23:38:04.898641",
+    "schedule": null
+  }
+}

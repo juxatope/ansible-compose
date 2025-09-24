@@ -1,0 +1,131 @@
+# Ansible Runner Service
+
+A microservice for running Ansible playbooks with JSON/YAML configuration management, built with a clean architecture and optional HTTP API.
+
+## Features
+
+- **Dual format support**: JSON and YAML configuration files
+- **Metadata tracking**: Run counts, limits, and execution history
+- **Comprehensive logging**: Dedicated log directories with automatic rotation
+- **Password file security**: Support for secure authentication files
+- **CLI interface**: Command-line tool with multiple commands
+- **HTTP API**: RESTful API using FastAPI (optional)
+- **Clean architecture**: Separated concerns with dependency injection
+- **Legacy compatibility**: Works with existing scripts
+
+## Architecture
+
+```
+src/
+├── config/          # Configuration loading & validation
+├── commands/        # Ansible command building
+├── execution/       # Command execution & process management
+├── metadata/        # Run tracking & limits
+├── api/            # HTTP API endpoints
+├── models/         # Data models & validation
+└── ansible_service.py  # Main service orchestrator
+```
+
+## Installation
+
+```bash
+# Basic installation
+pip install pyyaml
+
+# With HTTP API support
+pip install -r requirements.txt
+```
+
+## CLI Usage
+
+### Basic Commands
+
+```bash
+# Run a playbook (legacy compatibility)
+python main.py config.json --dry-run
+
+# Run with new syntax
+python main.py run config.yaml --dry-run
+
+# Get configuration info
+python main.py info config.json
+
+# Show command that would be executed
+python main.py command config.yaml
+
+# Validate configuration
+python main.py validate config.json
+
+# Log management
+python main.py logs summary config.yaml
+python main.py logs cleanup config.yaml --max-age-days 7
+python main.py logs tail config.yaml --lines 100
+```
+
+### HTTP API Server
+
+```bash
+# Start API server
+python main.py server --host 0.0.0.0 --port 8000
+```
+
+## API Endpoints
+
+- `GET /health` - Health check
+- `POST /run` - Execute playbook
+- `GET /config/{path}/info` - Get configuration metadata
+- `GET /config/{path}/command` - Get generated command
+
+## Configuration Format
+
+Both JSON and YAML formats are supported:
+
+```yaml
+playbook: playbooks/deploy.yml
+inventory: inventory/production
+limit: webservers
+extra_vars:
+  app_version: "1.2.3"
+  environment: production
+tags: [deploy, configure]
+verbose: 1
+become: true
+become_user: root
+become_method: sudo
+become_password_file: ~/.ansible/become_password
+vault_password_file: ~/.ansible/vault_password
+private_key: ~/.ssh/deploy_key
+connection: ssh
+connection_password_file: ~/.ansible/ssh_password
+log_directory: ~/ansible_logs
+log_level: INFO
+metadata:
+  name: "Production Deployment"
+  description: "Deploy application to production"
+  max_runs: 5
+```
+
+## Security Features
+
+- **File path expansion**: Supports `~` for home directory
+- **Permission validation**: Warns about insecure file permissions
+- **Private key security**: Enforces secure permissions (600/400) for SSH keys
+- **Password file security**: Warns if password files are world-readable
+
+## Logging Features
+
+- **Dedicated log directories**: Configurable log storage location
+- **Automatic log naming**: Timestamp-based log file naming with run names
+- **Log rotation**: Built-in cleanup of old log files by age and count
+- **Log management commands**: CLI tools for log summary, cleanup, and viewing
+- **Environment integration**: Sets ANSIBLE_LOG_PATH for Ansible logging
+
+## Development
+
+The codebase follows clean architecture principles:
+- **Models**: Data structures and validation
+- **Config**: File loading and format detection
+- **Commands**: Ansible command generation
+- **Execution**: Process management and result handling
+- **Metadata**: Run tracking and limits
+- **API**: HTTP interface layer

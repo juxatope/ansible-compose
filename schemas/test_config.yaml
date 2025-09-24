@@ -1,0 +1,16 @@
+become: false
+check: false
+diff: false
+extra_vars:
+  app_name: HelloWorld App
+  debug: true
+limit: localhost
+metadata:
+  description: Simple hello world test using ansible runner with YAML config
+  last_run: '2025-09-23T23:45:53.509068'
+  max_runs: 0
+  name: Hello World Test YAML
+  run_count: 12
+  schedule: null
+playbook: playbooks/hello_world.yml
+verbose: 3

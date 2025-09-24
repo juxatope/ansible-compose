@@ -1,0 +1,14 @@
+playbook: playbooks/hello_world.yml
+inventory: inventory/inventory.yaml
+limit: localhost
+extra_vars:
+  debug: true
+  test_logging: true
+verbose: 2
+log_directory: ~/ansible_logs
+log_level: DEBUG
+metadata:
+  name: "Logging Test Run"
+  description: "Test Ansible runner with dedicated log directory"
+  max_runs: 20
+  run_count: 0
