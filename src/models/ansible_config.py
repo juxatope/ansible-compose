@@ -17,6 +17,14 @@ class SystemdConfig:
     service_type: str = "simple"
     timeout_start_sec: int = 60
     timeout_stop_sec: int = 30
+    # Timer configuration
+    timer_enabled: bool = False
+    on_calendar: Optional[str] = None  # e.g., "*:0/15" for every 15 minutes
+    on_boot_sec: Optional[str] = None  # e.g., "15min" - delay after boot
+    on_startup_sec: Optional[str] = None  # e.g., "30sec" - delay after systemd start
+    on_unit_active_sec: Optional[str] = None  # e.g., "1h" - repeat interval after completion
+    randomized_delay_sec: Optional[str] = None  # e.g., "5min" - random delay
+    persistent: bool = False  # Run missed timers at startup
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -31,7 +39,14 @@ class SystemdConfig:
             "requires": self.requires,
             "service_type": self.service_type,
             "timeout_start_sec": self.timeout_start_sec,
-            "timeout_stop_sec": self.timeout_stop_sec
+            "timeout_stop_sec": self.timeout_stop_sec,
+            "timer_enabled": self.timer_enabled,
+            "on_calendar": self.on_calendar,
+            "on_boot_sec": self.on_boot_sec,
+            "on_startup_sec": self.on_startup_sec,
+            "on_unit_active_sec": self.on_unit_active_sec,
+            "randomized_delay_sec": self.randomized_delay_sec,
+            "persistent": self.persistent
         }
 
     @classmethod
@@ -48,7 +63,14 @@ class SystemdConfig:
             requires=data.get("requires", []),
             service_type=data.get("service_type", "simple"),
             timeout_start_sec=data.get("timeout_start_sec", 60),
-            timeout_stop_sec=data.get("timeout_stop_sec", 30)
+            timeout_stop_sec=data.get("timeout_stop_sec", 30),
+            timer_enabled=data.get("timer_enabled", False),
+            on_calendar=data.get("on_calendar"),
+            on_boot_sec=data.get("on_boot_sec"),
+            on_startup_sec=data.get("on_startup_sec"),
+            on_unit_active_sec=data.get("on_unit_active_sec"),
+            randomized_delay_sec=data.get("randomized_delay_sec"),
+            persistent=data.get("persistent", False)
         )
 
 

@@ -70,15 +70,24 @@ Documentation=https://github.com/your-org/ansible-runner
         if systemd_config.requires:
             service_content += f"Requires={' '.join(systemd_config.requires)}\n"
 
+        # Use oneshot type for timer-based services
+        service_type = "oneshot" if systemd_config.timer_enabled else systemd_config.service_type
+
         service_content += f"""
 [Service]
-Type={systemd_config.service_type}
+Type={service_type}
 User={systemd_config.user or self._get_current_user()}
 WorkingDirectory={working_dir}
 ExecStart={python_path} {main_script} run {self.config_file_path}
-Restart={systemd_config.restart}
+"""
+
+        # Only add restart settings for non-timer services
+        if not systemd_config.timer_enabled:
+            service_content += f"""Restart={systemd_config.restart}
 RestartSec={systemd_config.restart_sec}
-TimeoutStartSec={systemd_config.timeout_start_sec}
+"""
+
+        service_content += f"""TimeoutStartSec={systemd_config.timeout_start_sec}
 TimeoutStopSec={systemd_config.timeout_stop_sec}
 """
 
@@ -104,6 +113,56 @@ WantedBy={systemd_config.wanted_by}
 
         return service_content
 
+    def generate_timer_file_content(self) -> str:
+        """Generate systemd timer file content."""
+        systemd_config = self.config.systemd
+        metadata = self.config.metadata
+
+        if not systemd_config.timer_enabled:
+            raise SystemdServiceError("Timer is not enabled in configuration")
+
+        # Determine service name from metadata or config file
+        service_name = metadata.name or f"ansible-runner-{self.config_file_path.stem}"
+        safe_service_name = self._sanitize_service_name(service_name)
+
+        timer_content = f"""[Unit]
+Description=Timer for {metadata.description or f'Ansible Runner Service: {service_name}'}
+"""
+
+        # Add Requires/After dependencies if specified
+        if systemd_config.requires:
+            timer_content += f"Requires={' '.join(systemd_config.requires)}\n"
+        if systemd_config.after:
+            timer_content += f"After={' '.join(systemd_config.after)}\n"
+
+        timer_content += f"""
+[Timer]
+Unit={safe_service_name}.service
+"""
+
+        # Add timer triggers
+        if systemd_config.on_calendar:
+            timer_content += f"OnCalendar={systemd_config.on_calendar}\n"
+        if systemd_config.on_boot_sec:
+            timer_content += f"OnBootSec={systemd_config.on_boot_sec}\n"
+        if systemd_config.on_startup_sec:
+            timer_content += f"OnStartupSec={systemd_config.on_startup_sec}\n"
+        if systemd_config.on_unit_active_sec:
+            timer_content += f"OnUnitActiveSec={systemd_config.on_unit_active_sec}\n"
+
+        # Add timer options
+        if systemd_config.randomized_delay_sec:
+            timer_content += f"RandomizedDelaySec={systemd_config.randomized_delay_sec}\n"
+        if systemd_config.persistent:
+            timer_content += "Persistent=true\n"
+
+        timer_content += f"""
+[Install]
+WantedBy={systemd_config.wanted_by}
+"""
+
+        return timer_content
+
     def get_service_name(self) -> str:
         """Get the systemd service name."""
         service_name = self.config.metadata.name or f"ansible-runner-{self.config_file_path.stem}"
@@ -120,8 +179,19 @@ WantedBy={systemd_config.wanted_by}
             user_systemd_dir = Path.home() / ".config" / "systemd" / "user"
             return user_systemd_dir / f"{service_name}.service"
 
+    def get_timer_file_path(self, system_wide: bool = False) -> Path:
+        """Get the path where the timer file should be installed."""
+        service_name = self.get_service_name()
+
+        if system_wide:
+            return Path(f"/etc/systemd/system/{service_name}.timer")
+        else:
+            # User timer
+            user_systemd_dir = Path.home() / ".config" / "systemd" / "user"
+            return user_systemd_dir / f"{service_name}.timer"
+
     def install_service(self, system_wide: bool = False, enable: bool = True) -> str:
-        """Install the systemd service."""
+        """Install the systemd service and optionally timer."""
         service_content = self.generate_service_file_content()
         service_file_path = self.get_service_file_path(system_wide)
 
@@ -132,6 +202,15 @@ WantedBy={systemd_config.wanted_by}
         with open(service_file_path, 'w') as f:
             f.write(service_content)
 
+        # Install timer if enabled
+        timer_file_path = None
+        if self.config.systemd.timer_enabled:
+            timer_content = self.generate_timer_file_content()
+            timer_file_path = self.get_timer_file_path(system_wide)
+
+            with open(timer_file_path, 'w') as f:
+                f.write(timer_content)
+
         # Reload systemd
         systemctl_cmd = ["systemctl"]
         if not system_wide:
@@ -141,25 +220,42 @@ WantedBy={systemd_config.wanted_by}
             # Reload daemon
             subprocess.run(systemctl_cmd + ["daemon-reload"], check=True)
 
-            # Enable service if requested
+            # Enable service/timer if requested
             if enable and self.config.systemd.enabled:
-                subprocess.run(systemctl_cmd + ["enable", self.get_service_name()], check=True)
+                if self.config.systemd.timer_enabled:
+                    # For timers, enable the timer unit (not the service)
+                    timer_name = self.get_service_name() + ".timer"
+                    subprocess.run(systemctl_cmd + ["enable", timer_name], check=True)
+                else:
+                    # For regular services, enable the service
+                    subprocess.run(systemctl_cmd + ["enable", self.get_service_name()], check=True)
 
-            return str(service_file_path)
+            if timer_file_path:
+                return f"Service: {service_file_path}, Timer: {timer_file_path}"
+            else:
+                return str(service_file_path)
 
         except subprocess.CalledProcessError as e:
             raise SystemdServiceError(f"Failed to install systemd service: {e}")
 
     def uninstall_service(self, system_wide: bool = False) -> bool:
-        """Uninstall the systemd service."""
+        """Uninstall the systemd service and timer."""
         service_name = self.get_service_name()
         service_file_path = self.get_service_file_path(system_wide)
+        timer_file_path = self.get_timer_file_path(system_wide)
 
         systemctl_cmd = ["systemctl"]
         if not system_wide:
             systemctl_cmd.append("--user")
 
         try:
+            # Stop and disable timer if it exists
+            if self.config.systemd.timer_enabled and timer_file_path.exists():
+                timer_name = service_name + ".timer"
+                subprocess.run(systemctl_cmd + ["stop", timer_name], check=False)
+                subprocess.run(systemctl_cmd + ["disable", timer_name], check=False)
+                timer_file_path.unlink()
+
             # Stop service if running
             subprocess.run(systemctl_cmd + ["stop", service_name], check=False)
 
@@ -220,6 +316,84 @@ WantedBy={systemd_config.wanted_by}
 
         except subprocess.CalledProcessError as e:
             raise SystemdServiceError(f"Failed to get service status: {e}")
+
+    def start_timer(self, system_wide: bool = False) -> bool:
+        """Start the systemd timer."""
+        if not self.config.systemd.timer_enabled:
+            raise SystemdServiceError("Timer is not enabled in configuration")
+
+        timer_name = self.get_service_name() + ".timer"
+        systemctl_cmd = ["systemctl"]
+        if not system_wide:
+            systemctl_cmd.append("--user")
+
+        try:
+            subprocess.run(systemctl_cmd + ["start", timer_name], check=True)
+            return True
+        except subprocess.CalledProcessError as e:
+            raise SystemdServiceError(f"Failed to start timer: {e}")
+
+    def stop_timer(self, system_wide: bool = False) -> bool:
+        """Stop the systemd timer."""
+        if not self.config.systemd.timer_enabled:
+            raise SystemdServiceError("Timer is not enabled in configuration")
+
+        timer_name = self.get_service_name() + ".timer"
+        systemctl_cmd = ["systemctl"]
+        if not system_wide:
+            systemctl_cmd.append("--user")
+
+        try:
+            subprocess.run(systemctl_cmd + ["stop", timer_name], check=True)
+            return True
+        except subprocess.CalledProcessError as e:
+            raise SystemdServiceError(f"Failed to stop timer: {e}")
+
+    def get_timer_status(self, system_wide: bool = False) -> dict:
+        """Get the status of the systemd timer."""
+        if not self.config.systemd.timer_enabled:
+            raise SystemdServiceError("Timer is not enabled in configuration")
+
+        timer_name = self.get_service_name() + ".timer"
+        systemctl_cmd = ["systemctl"]
+        if not system_wide:
+            systemctl_cmd.append("--user")
+
+        try:
+            # Get timer status
+            result = subprocess.run(
+                systemctl_cmd + ["status", timer_name],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            # Get is-enabled status
+            enabled_result = subprocess.run(
+                systemctl_cmd + ["is-enabled", timer_name],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            # Get is-active status
+            active_result = subprocess.run(
+                systemctl_cmd + ["is-active", timer_name],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+
+            return {
+                "name": timer_name,
+                "active": active_result.stdout.strip(),
+                "enabled": enabled_result.stdout.strip(),
+                "status": result.stdout,
+                "return_code": result.returncode
+            }
+
+        except subprocess.CalledProcessError as e:
+            raise SystemdServiceError(f"Failed to get timer status: {e}")
 
     def _sanitize_service_name(self, name: str) -> str:
         """Sanitize service name for systemd."""

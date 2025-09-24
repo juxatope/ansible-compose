@@ -155,7 +155,17 @@ def systemd_command(args):
 
         if args.systemd_action == "generate":
             content = service.generate_systemd_service()
+            print("=== Service File ===")
             print(content)
+
+            # Also generate timer if enabled
+            try:
+                timer_content = service.generate_systemd_timer()
+                print("\n=== Timer File ===")
+                print(timer_content)
+            except Exception:
+                # Timer not enabled or not configured
+                pass
 
         elif args.systemd_action == "install":
             enable = not getattr(args, 'no_enable', False)
@@ -190,6 +200,30 @@ def systemd_command(args):
             except subprocess.CalledProcessError as e:
                 print(f"Failed to {args.systemd_action} service: {e}")
                 return 1
+
+        elif args.systemd_action == "timer-start":
+            success = service.start_systemd_timer(system_wide)
+            if success:
+                print("Timer started successfully")
+            else:
+                print("Timer start failed")
+                return 1
+
+        elif args.systemd_action == "timer-stop":
+            success = service.stop_systemd_timer(system_wide)
+            if success:
+                print("Timer stopped successfully")
+            else:
+                print("Timer stop failed")
+                return 1
+
+        elif args.systemd_action == "timer-status":
+            status = service.get_systemd_timer_status(system_wide)
+            print(f"Timer: {status['name']}")
+            print(f"Active: {status['active']}")
+            print(f"Enabled: {status['enabled']}")
+            print("\nStatus Details:")
+            print(status['status'])
 
         return 0
 
@@ -298,6 +332,19 @@ def main():
         action_parser = systemd_subparsers.add_parser(action, help=f"{action.title()} systemd service")
         action_parser.add_argument("config", help="Path to configuration file")
         action_parser.add_argument("--system", action="store_true", help="Control system service")
+
+    # Timer-specific commands
+    timer_start_parser = systemd_subparsers.add_parser("timer-start", help="Start systemd timer")
+    timer_start_parser.add_argument("config", help="Path to configuration file")
+    timer_start_parser.add_argument("--system", action="store_true", help="Control system timer")
+
+    timer_stop_parser = systemd_subparsers.add_parser("timer-stop", help="Stop systemd timer")
+    timer_stop_parser.add_argument("config", help="Path to configuration file")
+    timer_stop_parser.add_argument("--system", action="store_true", help="Control system timer")
+
+    timer_status_parser = systemd_subparsers.add_parser("timer-status", help="Show systemd timer status")
+    timer_status_parser.add_argument("config", help="Path to configuration file")
+    timer_status_parser.add_argument("--system", action="store_true", help="Check system timer")
 
     # Handle legacy usage first (before parsing subcommands)
     if len(sys.argv) >= 2 and not sys.argv[1].startswith('-') and sys.argv[1] not in ['run', 'info', 'command', 'validate', 'logs', 'systemd']:

@@ -8,6 +8,7 @@ A microservice for running Ansible playbooks with JSON/YAML configuration manage
 - **Metadata tracking**: Run counts, limits, and execution history
 - **Comprehensive logging**: Dedicated log directories with automatic rotation
 - **Password file security**: Support for secure authentication files
+- **SystemD integration**: Service and timer-based scheduled execution
 - **CLI interface**: Command-line tool with multiple commands
 - **Clean architecture**: Separated concerns with dependency injection
 - **Legacy compatibility**: Works with existing scripts
@@ -65,6 +66,11 @@ python main.py systemd install config.yaml
 python main.py systemd status config.yaml
 python main.py systemd start config.yaml
 python main.py systemd uninstall config.yaml
+
+# Systemd timer management (for scheduled execution)
+python main.py systemd timer-start config.yaml
+python main.py systemd timer-stop config.yaml
+python main.py systemd timer-status config.yaml
 ```
 
 
@@ -124,6 +130,35 @@ working_directory: ~/projects/ansible
 playbook: site.yml  # Will look for /opt/my-ansible-project/site.yml
 inventory: inventories/prod  # Will look for /opt/my-ansible-project/inventories/prod
 ```
+
+## SystemD Timer Configuration
+
+For scheduled playbook execution, configure the systemd timer settings:
+
+```yaml
+systemd:
+  enabled: true
+  # Timer configuration
+  timer_enabled: true
+  on_calendar: "*:0/15"        # Every 15 minutes
+  on_boot_sec: "5min"          # 5 minutes after boot
+  randomized_delay_sec: "1min" # Random delay up to 1 minute
+  persistent: true             # Run missed timers on startup
+```
+
+**Timer Schedule Examples:**
+- `"*:0/15"` - Every 15 minutes
+- `"Mon 02:00"` - Every Monday at 2:00 AM
+- `"daily"` - Once per day (midnight)
+- `"weekly"` - Once per week (Sunday midnight)
+- `"*-*-* 06:30:00"` - Daily at 6:30 AM
+
+**Timer Options:**
+- `on_calendar`: Cron-like scheduling (systemd calendar format)
+- `on_boot_sec`: Delay after system boot (e.g., "15min", "1h")
+- `on_unit_active_sec`: Repeat interval after completion
+- `randomized_delay_sec`: Random delay to spread load
+- `persistent`: Run missed executions at startup
 
 ## Security Features
 

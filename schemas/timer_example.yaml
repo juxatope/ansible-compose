@@ -1,0 +1,36 @@
+playbook: playbooks/hello_world.yml
+inventory: inventory/inventory.yaml
+limit: localhost
+working_directory: .
+extra_vars:
+  scheduled: true
+  timer_run: true
+verbose: 1
+log_directory: ./ansible_logs
+log_level: INFO
+metadata:
+  name: "Scheduled Task"
+  description: "Scheduled Ansible playbook execution every 15 minutes"
+  max_runs: null  # No limit for scheduled runs
+systemd:
+  enabled: true
+  user: null  # Uses current user
+  working_directory: null
+  environment_file: null
+  restart: "no"  # oneshot services don't restart
+  restart_sec: 5
+  wanted_by: "multi-user.target"
+  after:
+    - network.target
+  requires: []
+  service_type: "simple"  # Will be overridden to oneshot for timers
+  timeout_start_sec: 60
+  timeout_stop_sec: 30
+  # Timer configuration
+  timer_enabled: true
+  on_calendar: "*:0/15"  # Every 15 minutes
+  on_boot_sec: "5min"    # 5 minutes after boot
+  on_startup_sec: null
+  on_unit_active_sec: null
+  randomized_delay_sec: "1min"  # Random delay up to 1 minute
+  persistent: true  # Run missed timers on startup

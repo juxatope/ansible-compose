@@ -130,3 +130,19 @@ class AnsibleService:
     def get_systemd_service_name(self) -> str:
         """Get systemd service name."""
         return self.systemd_generator.get_service_name()
+
+    def generate_systemd_timer(self) -> str:
+        """Generate systemd timer file content."""
+        return self.systemd_generator.generate_timer_file_content()
+
+    def start_systemd_timer(self, system_wide: bool = False) -> bool:
+        """Start systemd timer."""
+        return self.systemd_generator.start_timer(system_wide)
+
+    def stop_systemd_timer(self, system_wide: bool = False) -> bool:
+        """Stop systemd timer."""
+        return self.systemd_generator.stop_timer(system_wide)
+
+    def get_systemd_timer_status(self, system_wide: bool = False) -> dict:
+        """Get systemd timer status."""
+        return self.systemd_generator.get_timer_status(system_wide)

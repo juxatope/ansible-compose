@@ -30,5 +30,13 @@ systemd:
   user: null
   wanted_by: multi-user.target
   working_directory: null
+  # Timer configuration (disabled by default)
+  timer_enabled: false
+  on_calendar: null
+  on_boot_sec: null
+  on_startup_sec: null
+  on_unit_active_sec: null
+  randomized_delay_sec: null
+  persistent: false
 verbose: 2
 working_directory: .
