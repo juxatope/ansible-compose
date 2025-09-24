@@ -5,17 +5,17 @@ from pathlib import Path
 
 # Get the directory containing this spec file
 spec_root = Path(SPECPATH)
-project_root = spec_root
+project_root = spec_root.parent  # Go up one level to project root
 
 a = Analysis(
-    ['main.py'],
+    [str(project_root / 'main.py')],
     pathex=[str(project_root)],
     binaries=[],
     datas=[
         # Include configuration schemas and examples
-        ('schemas', 'schemas'),
+        (str(project_root / 'schemas'), 'schemas'),
         # Include documentation (contains README.md)
-        ('docs', 'docs'),
+        (str(project_root / 'docs'), 'docs'),
     ],
     hiddenimports=[
         # Ensure all our modules are included

@@ -44,13 +44,21 @@ def clean_build():
     """Clean previous build artifacts."""
     print("🧹 Cleaning previous builds...")
 
-    directories_to_clean = ['build', 'dist', '__pycache__']
-    files_to_clean = ['*.pyc']
+    # Clean build artifacts in build_system directory
+    build_system_dir = Path('build_system')
+    directories_to_clean = [build_system_dir / 'build', build_system_dir / 'dist']
 
-    for dir_name in directories_to_clean:
+    for dir_path in directories_to_clean:
+        if dir_path.exists():
+            shutil.rmtree(dir_path)
+            print(f"   Removed {dir_path}/")
+
+    # Also clean any old build/dist in project root
+    root_dirs_to_clean = ['build', 'dist']
+    for dir_name in root_dirs_to_clean:
         if Path(dir_name).exists():
             shutil.rmtree(dir_name)
-            print(f"   Removed {dir_name}/")
+            print(f"   Removed {dir_name}/ (legacy location)")
 
     # Clean __pycache__ directories recursively
     for pycache in Path('.').rglob('__pycache__'):
@@ -64,18 +72,20 @@ def clean_build():
 
 def build_executable():
     """Build the executable using PyInstaller."""
-    spec_file = Path('build.spec')
+    spec_file = Path('build_system/build.spec')
 
     if not spec_file.exists():
         print("❌ build.spec file not found!")
         sys.exit(1)
 
-    # Build using the spec file
-    cmd = f"pyinstaller {spec_file} --clean --noconfirm"
+    # Build using the spec file with custom paths
+    build_dir = Path('build_system/build')
+    dist_dir = Path('build_system/dist')
+    cmd = f"pyinstaller {spec_file} --clean --noconfirm --distpath {dist_dir} --workpath {build_dir}"
     run_command(cmd, "Building executable with PyInstaller")
 
     # Check if the executable was created
-    executable_path = Path('dist/ansible-runner')
+    executable_path = Path('build_system/dist/ansible-runner')
     if executable_path.exists():
         print(f"✅ Executable created: {executable_path.absolute()}")
 
@@ -114,7 +124,7 @@ def create_distribution():
     """Create a distribution package."""
     print("📦 Creating distribution package...")
 
-    dist_dir = Path('dist')
+    dist_dir = Path('build_system/dist')
     executable = dist_dir / 'ansible-runner'
 
     # Copy important files to dist directory
@@ -151,10 +161,10 @@ def print_usage_info(executable_path):
     print(f"  {executable_path} run examples/timer_example.yaml --dry-run")
     print(f"  {executable_path} systemd generate examples/timer_example.yaml")
     print("\n📁 Distribution contents:")
-    print("  dist/ansible-runner    - Main executable")
-    print("  dist/examples/         - Configuration examples")
-    print("  dist/docs/             - Complete documentation")
-    print("  dist/README.md         - Project README")
+    print("  build_system/dist/ansible-runner    - Main executable")
+    print("  build_system/dist/examples/         - Configuration examples")
+    print("  build_system/dist/docs/             - Complete documentation")
+    print("  build_system/dist/README.md         - Project README")
     print("\n🚀 The executable is self-contained and ready to deploy!")
 
 def main():
@@ -162,10 +172,10 @@ def main():
     print("🏗️  Ansible Runner - Build Script")
     print("="*50)
 
-    # Change to script directory
-    script_dir = Path(__file__).parent.absolute()
-    os.chdir(script_dir)
-    print(f"📁 Working directory: {script_dir}")
+    # Change to project root directory (parent of build_system)
+    project_root = Path(__file__).parent.parent.absolute()
+    os.chdir(project_root)
+    print(f"📁 Working directory: {project_root}")
 
     # Build steps
     check_dependencies()

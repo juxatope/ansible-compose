@@ -34,13 +34,13 @@ build:
 		echo "❌ Virtual environment not found. Run 'make install' first."; \
 		exit 1; \
 	fi
-	./venv/bin/python build.py
-	@echo "🎉 Build completed! Check dist/ansible-runner"
+	./venv/bin/python build_system/build.py
+	@echo "🎉 Build completed! Check build_system/dist/ansible-runner"
 
 # Clean build artifacts
 clean:
 	@echo "🧹 Cleaning build artifacts..."
-	rm -rf build/ dist/ *.spec
+	rm -rf build_system/build/ build_system/dist/ build/ dist/ *.spec
 	find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 	find . -name "*.pyc" -delete
 	@echo "✅ Clean completed"
