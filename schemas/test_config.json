@@ -1,6 +1,7 @@
 {
   "playbook": "playbooks/hello_world.yml",
   "limit": "localhost",
+  "working_directory": ".",
   "extra_vars": {
     "debug": true,
     "app_name": "HelloWorld App"

@@ -7,6 +7,7 @@ from .execution.executor import AnsibleExecutor, ExecutionResult
 from .metadata.manager import MetadataManager, RunLimitExceeded
 from .models.ansible_config import AnsibleConfig
 from .logging.log_manager import LogManager
+from .systemd.service_generator import SystemdServiceGenerator
 
 
 class AnsibleService:
@@ -25,6 +26,7 @@ class AnsibleService:
             log_manager=self.log_manager
         )
         self.metadata_manager = MetadataManager(self.config_loader)
+        self.systemd_generator = SystemdServiceGenerator(config, str(config_file))
 
     def load_config(self) -> AnsibleConfig:
         return self.config_loader.load()
@@ -59,7 +61,12 @@ class AnsibleService:
 
         # Execute command with run name for logging
         run_name = run_info["name"]
-        result = self.executor.execute(command, dry_run=dry_run, run_name=run_name)
+        result = self.executor.execute(
+            command,
+            dry_run=dry_run,
+            run_name=run_name,
+            working_directory=config.working_directory
+        )
 
         # Update metadata if execution was successful or if configured to always update
         if not skip_metadata_update and (result.return_code == 0 or not dry_run):
@@ -103,3 +110,23 @@ class AnsibleService:
         if self.log_manager:
             return self.log_manager.tail_log(lines)
         return None
+
+    def generate_systemd_service(self) -> str:
+        """Generate systemd service file content."""
+        return self.systemd_generator.generate_service_file_content()
+
+    def install_systemd_service(self, system_wide: bool = False, enable: bool = True) -> str:
+        """Install systemd service."""
+        return self.systemd_generator.install_service(system_wide, enable)
+
+    def uninstall_systemd_service(self, system_wide: bool = False) -> bool:
+        """Uninstall systemd service."""
+        return self.systemd_generator.uninstall_service(system_wide)
+
+    def get_systemd_service_status(self, system_wide: bool = False) -> dict:
+        """Get systemd service status."""
+        return self.systemd_generator.get_service_status(system_wide)
+
+    def get_systemd_service_name(self) -> str:
+        """Get systemd service name."""
+        return self.systemd_generator.get_service_name()

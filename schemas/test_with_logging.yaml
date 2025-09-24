@@ -1,14 +1,34 @@
-playbook: playbooks/hello_world.yml
-inventory: inventory/inventory.yaml
-limit: localhost
+become: false
+check: false
+diff: false
 extra_vars:
   debug: true
   test_logging: true
-verbose: 2
-log_directory: ~/ansible_logs
+inventory: inventory/inventory.yaml
+limit: localhost
+log_directory: ./ansible_logs
 log_level: DEBUG
 metadata:
-  name: "Logging Test Run"
-  description: "Test Ansible runner with dedicated log directory"
+  description: Test Ansible runner with dedicated log directory
+  last_run: '2025-09-24T00:38:52.887406'
   max_runs: 20
-  run_count: 0
+  name: Logging Test Run
+  run_count: 1
+  schedule: null
+playbook: playbooks/hello_world.yml
+systemd:
+  after:
+  - network.target
+  enabled: false
+  environment_file: null
+  requires: []
+  restart: on-failure
+  restart_sec: 5
+  service_type: simple
+  timeout_start_sec: 60
+  timeout_stop_sec: 30
+  user: null
+  wanted_by: multi-user.target
+  working_directory: null
+verbose: 2
+working_directory: .

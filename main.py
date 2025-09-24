@@ -166,6 +166,57 @@ def logs_command(args):
         return 1
 
 
+def systemd_command(args):
+    try:
+        import subprocess
+        service = AnsibleService(args.config)
+        system_wide = getattr(args, 'system', False)
+
+        if args.systemd_action == "generate":
+            content = service.generate_systemd_service()
+            print(content)
+
+        elif args.systemd_action == "install":
+            enable = not getattr(args, 'no_enable', False)
+            service_file = service.install_systemd_service(system_wide, enable)
+            print(f"Service installed: {service_file}")
+
+        elif args.systemd_action == "uninstall":
+            success = service.uninstall_systemd_service(system_wide)
+            if success:
+                print("Service uninstalled successfully")
+            else:
+                print("Service uninstallation failed")
+                return 1
+
+        elif args.systemd_action == "status":
+            status = service.get_systemd_service_status(system_wide)
+            print(f"Service: {status['name']}")
+            print(f"Active: {status['active']}")
+            print(f"Enabled: {status['enabled']}")
+            print("\nStatus Details:")
+            print(status['status'])
+
+        elif args.systemd_action in ["start", "stop", "restart", "enable", "disable"]:
+            service_name = service.get_systemd_service_name()
+            systemctl_cmd = ["systemctl"]
+            if not system_wide:
+                systemctl_cmd.append("--user")
+
+            try:
+                subprocess.run(systemctl_cmd + [args.systemd_action, service_name], check=True)
+                print(f"Service {service_name} {args.systemd_action}ed successfully")
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to {args.systemd_action} service: {e}")
+                return 1
+
+        return 0
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return 1
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Ansible Runner - Execute Ansible playbooks with JSON/YAML configuration"
@@ -250,8 +301,38 @@ def main():
     tail_parser.add_argument("config", help="Path to configuration file")
     tail_parser.add_argument("--lines", type=int, default=50, help="Number of lines to show (default: 50)")
 
+    # Systemd command
+    systemd_parser = subparsers.add_parser("systemd", help="Manage systemd service")
+    systemd_subparsers = systemd_parser.add_subparsers(dest="systemd_action", help="Systemd management actions")
+
+    # Generate service file
+    generate_parser = systemd_subparsers.add_parser("generate", help="Generate systemd service file")
+    generate_parser.add_argument("config", help="Path to configuration file")
+
+    # Install service
+    install_parser = systemd_subparsers.add_parser("install", help="Install systemd service")
+    install_parser.add_argument("config", help="Path to configuration file")
+    install_parser.add_argument("--system", action="store_true", help="Install as system service (requires sudo)")
+    install_parser.add_argument("--no-enable", action="store_true", help="Don't enable service after installation")
+
+    # Uninstall service
+    uninstall_parser = systemd_subparsers.add_parser("uninstall", help="Uninstall systemd service")
+    uninstall_parser.add_argument("config", help="Path to configuration file")
+    uninstall_parser.add_argument("--system", action="store_true", help="Remove system service (requires sudo)")
+
+    # Service status
+    status_parser = systemd_subparsers.add_parser("status", help="Show systemd service status")
+    status_parser.add_argument("config", help="Path to configuration file")
+    status_parser.add_argument("--system", action="store_true", help="Check system service")
+
+    # Service control (start/stop/restart)
+    for action in ["start", "stop", "restart", "enable", "disable"]:
+        action_parser = systemd_subparsers.add_parser(action, help=f"{action.title()} systemd service")
+        action_parser.add_argument("config", help="Path to configuration file")
+        action_parser.add_argument("--system", action="store_true", help="Control system service")
+
     # Handle legacy usage first (before parsing subcommands)
-    if len(sys.argv) >= 2 and not sys.argv[1].startswith('-') and sys.argv[1] not in ['run', 'server', 'info', 'command', 'validate', 'logs']:
+    if len(sys.argv) >= 2 and not sys.argv[1].startswith('-') and sys.argv[1] not in ['run', 'server', 'info', 'command', 'validate', 'logs', 'systemd']:
         # Legacy mode: python main.py config.json [--dry-run]
         config_file = sys.argv[1]
         if Path(config_file).exists():
@@ -281,6 +362,8 @@ def main():
         return validate_command(args)
     elif args.command == "logs":
         return logs_command(args)
+    elif args.command == "systemd":
+        return systemd_command(args)
     else:
         parser.print_help()
         return 1

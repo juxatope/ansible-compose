@@ -5,6 +5,7 @@ extra_vars:
   app_name: HelloWorld App
   debug: true
 limit: localhost
+working_directory: "."
 metadata:
   description: Simple hello world test using ansible runner with YAML config
   last_run: '2025-09-23T23:45:53.509068'

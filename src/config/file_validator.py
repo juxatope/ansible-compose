@@ -97,6 +97,10 @@ class FileValidator:
             if config.log_directory:
                 FileValidator.validate_log_directory(config.log_directory)
 
+            # Validate working directory
+            if config.working_directory:
+                FileValidator.validate_working_directory(config.working_directory)
+
         except FileValidationError as e:
             warnings.append(f"Warning: {e}")
 
@@ -123,13 +127,23 @@ class FileValidator:
         if config.log_directory:
             config.log_directory = os.path.expanduser(config.log_directory)
 
+        if config.working_directory:
+            config.working_directory = os.path.expanduser(config.working_directory)
+
     @staticmethod
-    def validate_log_directory(log_directory: str) -> None:
+    def validate_log_directory(log_directory: str, strict: bool = True) -> None:
         """Validate log directory exists and is writable."""
         if not log_directory:
             return
 
         path = Path(log_directory)
+
+        # In non-strict mode, just check if parent directory exists
+        if not strict:
+            parent = path.parent
+            if not parent.exists():
+                raise FileValidationError(f"Log directory parent does not exist: {parent}")
+            return
 
         # Try to create directory if it doesn't exist
         if not path.exists():
@@ -145,3 +159,20 @@ class FileValidator:
         # Check if writable
         if not os.access(path, os.W_OK):
             raise FileValidationError(f"Log directory is not writable: {log_directory}")
+
+    @staticmethod
+    def validate_working_directory(working_directory: str) -> None:
+        """Validate working directory exists and is accessible."""
+        if not working_directory:
+            return
+
+        path = Path(working_directory)
+
+        if not path.exists():
+            raise FileValidationError(f"Working directory does not exist: {working_directory}")
+
+        if not path.is_dir():
+            raise FileValidationError(f"Working directory is not a directory: {working_directory}")
+
+        if not os.access(path, os.R_OK | os.X_OK):
+            raise FileValidationError(f"Working directory is not accessible: {working_directory}")

@@ -2,6 +2,7 @@
   "playbook": "site.yml",
   "inventory": "inventory/hosts",
   "limit": "webservers",
+  "working_directory": "/opt/ansible-project",
   "extra_vars": {
     "app_version": "1.2.3",
     "environment": "production"

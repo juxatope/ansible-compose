@@ -4,6 +4,55 @@ from datetime import datetime
 
 
 @dataclass
+class SystemdConfig:
+    enabled: bool = False
+    user: Optional[str] = None
+    working_directory: Optional[str] = None
+    environment_file: Optional[str] = None
+    restart: str = "on-failure"
+    restart_sec: int = 5
+    wanted_by: str = "multi-user.target"
+    after: List[str] = field(default_factory=lambda: ["network.target"])
+    requires: List[str] = field(default_factory=list)
+    service_type: str = "simple"
+    timeout_start_sec: int = 60
+    timeout_stop_sec: int = 30
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "user": self.user,
+            "working_directory": self.working_directory,
+            "environment_file": self.environment_file,
+            "restart": self.restart,
+            "restart_sec": self.restart_sec,
+            "wanted_by": self.wanted_by,
+            "after": self.after,
+            "requires": self.requires,
+            "service_type": self.service_type,
+            "timeout_start_sec": self.timeout_start_sec,
+            "timeout_stop_sec": self.timeout_stop_sec
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'SystemdConfig':
+        return cls(
+            enabled=data.get("enabled", False),
+            user=data.get("user"),
+            working_directory=data.get("working_directory"),
+            environment_file=data.get("environment_file"),
+            restart=data.get("restart", "on-failure"),
+            restart_sec=data.get("restart_sec", 5),
+            wanted_by=data.get("wanted_by", "multi-user.target"),
+            after=data.get("after", ["network.target"]),
+            requires=data.get("requires", []),
+            service_type=data.get("service_type", "simple"),
+            timeout_start_sec=data.get("timeout_start_sec", 60),
+            timeout_stop_sec=data.get("timeout_stop_sec", 30)
+        )
+
+
+@dataclass
 class MetadataConfig:
     name: Optional[str] = None
     description: Optional[str] = None
@@ -56,9 +105,11 @@ class AnsibleConfig:
     connection_password_file: Optional[str] = None
     timeout: Optional[int] = None
     start_at_task: Optional[str] = None
+    working_directory: Optional[str] = None
     log_directory: Optional[str] = None
     log_level: str = "INFO"
     metadata: MetadataConfig = field(default_factory=MetadataConfig)
+    systemd: SystemdConfig = field(default_factory=SystemdConfig)
 
     def to_dict(self) -> Dict[str, Any]:
         result = {
@@ -82,9 +133,11 @@ class AnsibleConfig:
             "connection_password_file": self.connection_password_file,
             "timeout": self.timeout,
             "start_at_task": self.start_at_task,
+            "working_directory": self.working_directory,
             "log_directory": self.log_directory,
             "log_level": self.log_level,
-            "metadata": self.metadata.to_dict()
+            "metadata": self.metadata.to_dict(),
+            "systemd": self.systemd.to_dict()
         }
         # Remove None values for cleaner serialization
         return {k: v for k, v in result.items() if v is not None}
@@ -93,6 +146,9 @@ class AnsibleConfig:
     def from_dict(cls, data: Dict[str, Any]) -> 'AnsibleConfig':
         metadata_data = data.get("metadata", {})
         metadata = MetadataConfig.from_dict(metadata_data) if metadata_data else MetadataConfig()
+
+        systemd_data = data.get("systemd", {})
+        systemd = SystemdConfig.from_dict(systemd_data) if systemd_data else SystemdConfig()
 
         return cls(
             playbook=data["playbook"],
@@ -115,9 +171,11 @@ class AnsibleConfig:
             connection_password_file=data.get("connection_password_file"),
             timeout=data.get("timeout"),
             start_at_task=data.get("start_at_task"),
+            working_directory=data.get("working_directory"),
             log_directory=data.get("log_directory"),
             log_level=data.get("log_level", "INFO"),
-            metadata=metadata
+            metadata=metadata,
+            systemd=systemd
         )
 
     def validate(self) -> None:

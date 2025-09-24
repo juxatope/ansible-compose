@@ -60,6 +60,13 @@ python main.py validate config.json
 python main.py logs summary config.yaml
 python main.py logs cleanup config.yaml --max-age-days 7
 python main.py logs tail config.yaml --lines 100
+
+# Systemd service management
+python main.py systemd generate config.yaml
+python main.py systemd install config.yaml
+python main.py systemd status config.yaml
+python main.py systemd start config.yaml
+python main.py systemd uninstall config.yaml
 ```
 
 ### HTTP API Server
@@ -84,6 +91,7 @@ Both JSON and YAML formats are supported:
 playbook: playbooks/deploy.yml
 inventory: inventory/production
 limit: webservers
+working_directory: /opt/ansible-project  # Execute from this directory
 extra_vars:
   app_version: "1.2.3"
   environment: production
@@ -103,6 +111,33 @@ metadata:
   name: "Production Deployment"
   description: "Deploy application to production"
   max_runs: 5
+systemd:
+  enabled: true
+  user: ansible
+  working_directory: /opt/ansible-runner  # Service working directory
+  restart: always
+  restart_sec: 10
+  service_type: simple
+  after:
+    - network.target
+  environment_file: /etc/ansible-runner/environment
+```
+
+### Working Directory Examples
+
+```yaml
+# Use current directory
+working_directory: "."
+
+# Use absolute path
+working_directory: /opt/my-ansible-project
+
+# Use home directory expansion
+working_directory: ~/projects/ansible
+
+# Relative paths in playbook will be resolved from working_directory
+playbook: site.yml  # Will look for /opt/my-ansible-project/site.yml
+inventory: inventories/prod  # Will look for /opt/my-ansible-project/inventories/prod
 ```
 
 ## Security Features
@@ -111,6 +146,7 @@ metadata:
 - **Permission validation**: Warns about insecure file permissions
 - **Private key security**: Enforces secure permissions (600/400) for SSH keys
 - **Password file security**: Warns if password files are world-readable
+- **Working directory control**: Execute playbooks from specific directories
 
 ## Logging Features
 
@@ -119,6 +155,15 @@ metadata:
 - **Log rotation**: Built-in cleanup of old log files by age and count
 - **Log management commands**: CLI tools for log summary, cleanup, and viewing
 - **Environment integration**: Sets ANSIBLE_LOG_PATH for Ansible logging
+
+## Systemd Integration
+
+- **Service file generation**: Auto-generate systemd unit files from configuration
+- **Installation management**: Install/uninstall services as user or system services
+- **Service control**: Start, stop, restart, enable, disable services via CLI
+- **Status monitoring**: Check service status and health
+- **Production ready**: Configurable restart policies, timeouts, and dependencies
+- **Environment management**: Support for environment files and variables
 
 ## Development
 
