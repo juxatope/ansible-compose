@@ -1,5 +1,8 @@
 # Core dependencies
 pyyaml>=6.0
 
+# Build dependencies (for creating executables)
+pyinstaller>=5.13.0
+
 # Development dependencies (optional)
 pytest>=7.4.0

@@ -10,10 +10,10 @@ log_directory: ./ansible_logs
 log_level: DEBUG
 metadata:
   description: Test Ansible runner with dedicated log directory
-  last_run: '2025-09-24T00:38:52.887406'
+  last_run: '2025-09-24T01:43:50.714934'
   max_runs: 20
   name: Logging Test Run
-  run_count: 1
+  run_count: 2
   schedule: null
 playbook: playbooks/hello_world.yml
 systemd:
@@ -21,22 +21,21 @@ systemd:
   - network.target
   enabled: false
   environment_file: null
+  on_boot_sec: null
+  on_calendar: null
+  on_startup_sec: null
+  on_unit_active_sec: null
+  persistent: false
+  randomized_delay_sec: null
   requires: []
   restart: on-failure
   restart_sec: 5
   service_type: simple
   timeout_start_sec: 60
   timeout_stop_sec: 30
+  timer_enabled: false
   user: null
   wanted_by: multi-user.target
   working_directory: null
-  # Timer configuration (disabled by default)
-  timer_enabled: false
-  on_calendar: null
-  on_boot_sec: null
-  on_startup_sec: null
-  on_unit_active_sec: null
-  randomized_delay_sec: null
-  persistent: false
 verbose: 2
 working_directory: .
