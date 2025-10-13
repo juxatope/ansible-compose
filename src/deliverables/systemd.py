@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import Optional
 
-from ...models.ansible_config import AnsibleConfig
+from ..input.models import AnsibleConfig
 
 
 class SystemdServiceError(Exception):

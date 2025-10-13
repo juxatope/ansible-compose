@@ -1,0 +1,85 @@
+# Multi-Playbook Parallel Execution Example
+# Runs multiple playbooks in parallel with dependencies
+
+# Multiple playbooks with detailed configuration
+playbooks:
+  - name: "setup"
+    playbook: playbooks/setup.yml
+    tags: [infrastructure, setup]
+    extra_vars:
+      setup_timeout: 300
+    max_retries: 2
+    retry_delay: 10
+
+  - name: "deploy_api"
+    playbook: playbooks/deploy_api.yml
+    depends_on: [setup]  # Wait for setup to complete
+    extra_vars:
+      api_version: "v2.1.0"
+      api_port: 8080
+    timeout: 600
+    continue_on_error: false
+
+  - name: "deploy_frontend"
+    playbook: playbooks/deploy_frontend.yml
+    depends_on: [setup]  # Wait for setup to complete
+    extra_vars:
+      frontend_version: "v2.1.0"
+      frontend_port: 3000
+    timeout: 300
+    continue_on_error: false
+
+  - name: "configure_loadbalancer"
+    playbook: playbooks/configure_lb.yml
+    depends_on: [deploy_api, deploy_frontend]  # Wait for both deployments
+    extra_vars:
+      backend_servers:
+        - api:8080
+        - frontend:3000
+    max_retries: 3
+    retry_delay: 5
+
+  - name: "run_tests"
+    playbook: playbooks/integration_tests.yml
+    depends_on: [configure_loadbalancer]  # Wait for everything to be ready
+    continue_on_error: true  # Don't fail the whole deployment if tests fail
+    timeout: 900
+
+# Execution mode - parallel with dependency resolution
+execution_mode: parallel
+
+# Shared configuration
+inventory: inventory/production
+limit: all
+extra_vars:
+  environment: production
+  deployment_id: "{{ansible_date_time.epoch}}"
+
+verbose: 2
+become: true
+become_user: deploy
+
+# Working directory
+working_directory: /opt/deployment
+
+# Authentication
+private_key: ~/.ssh/production_key
+vault_password_file: ~/.ansible/vault_password
+
+# Logging
+log_directory: ~/deployment_logs
+log_level: INFO
+
+# Metadata
+metadata:
+  name: "Production Parallel Deployment"
+  description: "Deploy full stack application with parallel execution and dependencies"
+  max_runs: 5
+
+# SystemD integration
+systemd:
+  enabled: true
+  user: deploy
+  working_directory: /opt/deployment
+  restart: no  # Don't auto-restart deployments
+  service_type: oneshot

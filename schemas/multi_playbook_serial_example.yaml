@@ -1,0 +1,45 @@
+become: true
+become_user: root
+check: false
+diff: false
+execution_mode: serial
+extra_vars:
+  app_version: 2.1.0
+  environment: production
+inventory: ./inventory
+log_directory: /home/zmuniz/ansible_logs
+log_level: INFO
+metadata:
+  description: Deploy application using multiple playbooks in sequence
+  last_run: '2025-09-24T21:27:20.620226'
+  max_runs: 10
+  name: Multi-Playbook Serial Deployment
+  run_count: 4
+  schedule: null
+playbooks:
+- playbooks/setup.yml
+- playbooks/deploy.yml
+- playbooks/tests.yml
+private_key: /home/zmuniz/.ssh/deploy_key
+systemd:
+  after:
+  - network.target
+  enabled: true
+  environment_file: null
+  on_boot_sec: null
+  on_calendar: null
+  on_startup_sec: null
+  on_unit_active_sec: null
+  persistent: false
+  randomized_delay_sec: null
+  requires: []
+  restart: on-failure
+  restart_sec: 5
+  service_type: simple
+  timeout_start_sec: 60
+  timeout_stop_sec: 30
+  timer_enabled: false
+  user: ansible
+  wanted_by: multi-user.target
+  working_directory: /opt/ansible-runner
+verbose: 1

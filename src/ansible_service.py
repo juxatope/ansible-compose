@@ -1,13 +1,14 @@
 from pathlib import Path
 from typing import Optional
 
-from .config.loader import ConfigLoader
-from .adapters.ansible_cli.command_builder import CommandBuilder
-from .core.execution.executor import AnsibleExecutor, ExecutionResult
-from .core.metadata.manager import MetadataManager, RunLimitExceeded
-from .models.ansible_config import AnsibleConfig
-from .infrastructure.logging.log_manager import LogManager
-from .adapters.systemd.service_generator import SystemdServiceGenerator
+from .input.loader import ConfigLoader
+from .execution.command_builder import CommandBuilder
+from .execution.executor import AnsibleExecutor, ExecutionResult
+from .execution.multi_executor import MultiPlaybookExecutor, MultiPlaybookExecutionResult
+from .deliverables.metadata import MetadataManager, RunLimitExceeded
+from .input.models import AnsibleConfig
+from .deliverables.logging import LogManager
+from .deliverables.systemd import SystemdServiceGenerator
 
 
 class AnsibleService:
@@ -31,9 +32,14 @@ class AnsibleService:
     def load_config(self) -> AnsibleConfig:
         return self.config_loader.load()
 
-    def run_playbook(self, dry_run: bool = False, skip_metadata_update: bool = False) -> ExecutionResult:
+    def run_playbook(self, dry_run: bool = False, skip_metadata_update: bool = False, show_progress: bool = False) -> ExecutionResult | MultiPlaybookExecutionResult:
         config = self.load_config()
 
+        # Check if this is a multi-playbook configuration
+        if config.is_multi_playbook():
+            return self.run_multiple_playbooks(dry_run, skip_metadata_update, show_progress)
+
+        # Single playbook execution (original logic)
         # Check run limits
         try:
             self.metadata_manager.validate_run_limits(config)
@@ -75,14 +81,112 @@ class AnsibleService:
 
         return result
 
+    def run_multiple_playbooks(self, dry_run: bool = False, skip_metadata_update: bool = False, show_progress: bool = False) -> MultiPlaybookExecutionResult:
+        """Execute multiple playbooks according to configuration."""
+        config = self.load_config()
+
+        if not config.is_multi_playbook():
+            raise ValueError("Configuration is not set up for multiple playbooks")
+
+        # Check run limits (using overall metadata)
+        try:
+            self.metadata_manager.validate_run_limits(config)
+        except RunLimitExceeded as e:
+            raise e
+
+        # Initialize multi-playbook executor with progress monitoring
+        multi_executor = MultiPlaybookExecutor(
+            config,
+            capture_output=self.executor.capture_output,
+            log_manager=self.log_manager,
+            show_progress=show_progress
+        )
+
+        # Execute all playbooks (the executor handles plan display and progress internally)
+        result = multi_executor.execute(dry_run)
+
+        # Update metadata if execution was successful or if configured to always update
+        if not skip_metadata_update and (result.success or not dry_run):
+            updated_config = self.metadata_manager.update_run_metadata(config)
+            self.metadata_manager.save_metadata(updated_config)
+
+        return result
+
+    def _display_execution_plan(self, plan: dict, dry_run: bool) -> None:
+        """Display the multi-playbook execution plan."""
+        mode_label = "DRY RUN - " if dry_run else ""
+        print(f"\n{mode_label}Multi-Playbook Execution Plan")
+        print("=" * 50)
+        print(f"Execution Mode: {plan['execution_mode'].upper()}")
+        print(f"Total Playbooks: {plan['total_playbooks']}")
+        print(f"Execution Groups: {len(plan['groups'])}")
+        print()
+
+        for group in plan['groups']:
+            group_type = "PARALLEL" if group['parallel'] else "SERIAL"
+            print(f"Group {group['group']} ({group_type}):")
+
+            for pb in group['playbooks']:
+                deps = f" (depends on: {', '.join(pb['dependencies'])})" if pb['dependencies'] else ""
+                retry_info = f" [retries: {pb['max_retries']}]" if pb['max_retries'] > 0 else ""
+                error_handling = " [continue on error]" if pb['continue_on_error'] else ""
+
+                print(f"  • {pb['name']}: {pb['playbook']}{deps}{retry_info}{error_handling}")
+
+            print()
+
+    def _display_execution_summary(self, result: MultiPlaybookExecutionResult) -> None:
+        """Display the execution results summary."""
+        print("\nExecution Summary")
+        print("=" * 50)
+        print(f"Overall Status: {'SUCCESS' if result.success else 'FAILED'}")
+        print(f"Total Duration: {result.total_duration:.2f}s")
+        print(f"Successful Playbooks: {result.summary['successful']}/{result.summary['total_playbooks']}")
+
+        if result.failed_playbooks:
+            print(f"Failed Playbooks: {result.summary['failed']}")
+            for failed in result.failed_playbooks:
+                print(f"  • {failed.name}: {failed.error_message}")
+
+        print(f"Average Duration: {result.summary['average_duration']:.2f}s")
+        print()
+
+        # Individual playbook results
+        for pb_result in result.playbook_results:
+            status = "✓ SUCCESS" if pb_result.success else "✗ FAILED"
+            retry_info = f" (retries: {pb_result.retries_used})" if pb_result.retries_used > 0 else ""
+            print(f"{status} {pb_result.name}: {pb_result.duration:.2f}s{retry_info}")
+
+        print()
+
     def get_run_info(self) -> dict:
         config = self.load_config()
         return self.metadata_manager.get_run_info(config)
 
     def build_command(self) -> str:
         config = self.load_config()
-        command_builder = CommandBuilder(config)
-        return command_builder.get_command_string()
+
+        if config.is_multi_playbook():
+            # Multi-playbook configuration - return execution plan
+            multi_builder = CommandBuilder(config)
+            commands = multi_builder.build_all()
+
+            result = []
+            result.append(f"Multi-playbook execution plan ({config.execution_mode.value}):")
+            result.append("=" * 50)
+
+            for cmd in commands:
+                result.append(f"Group {cmd['execution_group']} - {cmd['name']}: {' '.join(cmd['command'])}")
+                if cmd['dependencies']:
+                    result.append(f"  Dependencies: {', '.join(cmd['dependencies'])}")
+                if cmd['max_retries'] > 0:
+                    result.append(f"  Max retries: {cmd['max_retries']}")
+
+            return "\n".join(result)
+        else:
+            # Single playbook - original behavior
+            command_builder = CommandBuilder(config)
+            return command_builder.get_command_string()
 
     def validate_config(self) -> AnsibleConfig:
         config = self.load_config()

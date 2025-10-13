@@ -1,0 +1,74 @@
+# Multi-Playbook Mixed Example
+# Shows both simple and detailed playbook configurations
+
+playbooks:
+  # Simple string format - uses shared config
+  - playbooks/pre_checks.yml
+
+  # Detailed configuration with custom settings
+  - name: "database_setup"
+    playbook: playbooks/setup_database.yml
+    inventory: inventory/database_hosts
+    extra_vars:
+      db_version: "13.7"
+      backup_before_upgrade: true
+    tags: [database, setup]
+    max_retries: 1
+    timeout: 1800  # 30 minutes for database operations
+
+  # Another simple one
+  - playbooks/configure_monitoring.yml
+
+  # Detailed config with dependencies
+  - name: "application_deployment"
+    playbook: playbooks/deploy_app.yml
+    depends_on: [database_setup]  # Must wait for database
+    inventory: inventory/app_hosts
+    extra_vars:
+      app_version: "3.2.1"
+      database_host: "db.example.com"
+    tags: [application, deployment]
+    continue_on_error: false
+    max_retries: 2
+    retry_delay: 30
+
+  # Final validation - depends on everything
+  - name: "post_deployment_tests"
+    playbook: playbooks/validate_deployment.yml
+    depends_on: [application_deployment]
+    continue_on_error: true  # Don't fail deployment if validation fails
+    timeout: 600
+
+# Execution mode
+execution_mode: parallel
+
+# Shared configuration (applies to simple string playbooks and as defaults)
+inventory: inventory/all_hosts
+extra_vars:
+  deployment_date: "{{ansible_date_time.date}}"
+  deployment_user: "{{ansible_user_id}}"
+
+verbose: 1
+become: true
+forks: 10
+
+# Working directory
+working_directory: /opt/ansible-deployment
+
+# Authentication
+private_key: ~/.ssh/ansible_key
+become_password_file: ~/.ansible/become_password
+
+# Logging
+log_directory: ~/ansible_logs/deployment
+log_level: INFO
+
+# Metadata
+metadata:
+  name: "Mixed Playbook Deployment"
+  description: "Example showing both simple and detailed playbook configurations"
+  max_runs: 20
+
+# SystemD configuration
+systemd:
+  enabled: false  # Manual execution only

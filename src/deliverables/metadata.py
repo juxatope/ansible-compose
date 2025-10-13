@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Optional
 
-from ...models.ansible_config import AnsibleConfig, MetadataConfig
-from ...config.loader import ConfigLoader
+from ..input.models import AnsibleConfig, MetadataConfig
+from ..input.loader import ConfigLoader
 
 
 class RunLimitExceeded(Exception):

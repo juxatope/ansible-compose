@@ -10,9 +10,9 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.ansible_service import AnsibleService
-from src.core.metadata.manager import RunLimitExceeded
-from src.config.loader import ConfigFormatError
-from src.core.execution.executor import AnsibleExecutionError
+from src.deliverables.metadata import RunLimitExceeded
+from src.input.loader import ConfigFormatError
+from src.execution.executor import AnsibleExecutionError
 
 
 def setup_logging(verbose: bool = False):
@@ -32,15 +32,21 @@ def run_cli(args):
 
         result = service.run_playbook(
             dry_run=args.dry_run,
-            skip_metadata_update=args.no_metadata_update
+            skip_metadata_update=args.no_metadata_update,
+            show_progress=args.progress
         )
 
-        if args.verbose and result.stdout:
-            print("STDOUT:", result.stdout)
-        if args.verbose and result.stderr:
-            print("STDERR:", result.stderr)
-
-        return result.return_code
+        # Handle different result types
+        if hasattr(result, 'return_code'):
+            # Single playbook result (ExecutionResult)
+            if args.verbose and result.stdout:
+                print("STDOUT:", result.stdout)
+            if args.verbose and result.stderr:
+                print("STDERR:", result.stderr)
+            return result.return_code
+        else:
+            # Multi-playbook result (MultiPlaybookExecutionResult)
+            return 0 if result.success else 1
 
     except FileNotFoundError as e:
         print(f"Error: {e}")
@@ -261,6 +267,11 @@ def main():
         action="store_true",
         help="Skip updating run metadata"
     )
+    run_parser.add_argument(
+        "--progress",
+        action="store_true",
+        help="Show real-time progress for multi-playbook execution"
+    )
 
 
     # Info command
@@ -357,6 +368,7 @@ def main():
                 dry_run = "--dry-run" in sys.argv
                 no_metadata_update = False
                 verbose = "--verbose" in sys.argv or "-v" in sys.argv
+                progress = False
 
             setup_logging(LegacyArgs.verbose)
             return run_cli(LegacyArgs())

@@ -3,8 +3,8 @@ import yaml
 from typing import Dict, Any
 from pathlib import Path
 
-from ..models.ansible_config import AnsibleConfig
-from .file_validator import FileValidator
+from .models import AnsibleConfig
+from .validator import FileValidator
 
 
 class ConfigFormatError(Exception):

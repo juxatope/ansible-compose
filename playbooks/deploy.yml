@@ -1,0 +1,7 @@
+- name: lkjjlda
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - debug:
+        msg: "MMMMMMMMMMMMMMMM"
+    

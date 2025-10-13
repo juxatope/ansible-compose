@@ -1,17 +1,40 @@
 become: false
 check: false
 diff: false
+execution_mode: serial
 extra_vars:
   app_name: HelloWorld App
   debug: true
 limit: localhost
-working_directory: "."
+log_level: INFO
 metadata:
   description: Simple hello world test using ansible runner with YAML config
-  last_run: '2025-09-23T23:45:53.509068'
+  last_run: '2025-10-06T01:06:23.543520'
   max_runs: 0
   name: Hello World Test YAML
-  run_count: 12
+  run_count: 15
   schedule: null
 playbook: playbooks/hello_world.yml
+systemd:
+  after:
+  - network.target
+  enabled: false
+  environment_file: null
+  on_boot_sec: null
+  on_calendar: null
+  on_startup_sec: null
+  on_unit_active_sec: null
+  persistent: false
+  randomized_delay_sec: null
+  requires: []
+  restart: on-failure
+  restart_sec: 5
+  service_type: simple
+  timeout_start_sec: 60
+  timeout_stop_sec: 30
+  timer_enabled: false
+  user: null
+  wanted_by: multi-user.target
+  working_directory: null
 verbose: 3
+working_directory: .
